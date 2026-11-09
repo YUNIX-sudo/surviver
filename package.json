@@ -1,0 +1,20 @@
+{
+  "name": "surviver",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Co-op TABS-style horde survival: authoritative WebSocket server + Three.js client",
+  "workspaces": ["shared", "server", "client"],
+  "scripts": {
+    "dev:server": "npm run dev -w @surviver/server",
+    "dev:client": "npm run dev -w @surviver/client",
+    "typecheck": "tsc -p shared --noEmit && tsc -p server --noEmit && tsc -p client --noEmit",
+    "build": "npm run build -w @surviver/client && npm run build -w @surviver/server",
+    "start": "node server/dist/index.js",
+    "test:bots": "npm run bots -w @surviver/server",
+    "build:win": "npm run build:desktop -w @surviver/client && npm --prefix desktop install && npm --prefix desktop run build:win",
+    "deploy": "bash scripts/deploy.sh"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
