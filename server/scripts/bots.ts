@@ -146,6 +146,7 @@ async function main() {
   await sleep(100);
   b.send({ type: 'JOIN_ROOM', roomId: 'bots' });
   await Promise.all([a.joined, b.joined]);
+  await sleep(300); // let alice see a snapshot that already includes bob
   check('both bots joined the same room', a.snap!.players.length === 2);
 
   // ── honest gameplay: walk to the nearest tree and harvest it ──
@@ -215,9 +216,10 @@ async function main() {
   n = before();
   await sleep(2500); // refill token bucket
   for (let i = 0; i < 400; i++) a.send({ type: 'PING', id: i, ts: Date.now() });
-  await a.idle(4);
+  await a.idle(14); // report is aggregated over 300 ms
   check('RATE_LIMIT detected on 400-packet burst', a.violations.slice(n).includes('RATE_LIMIT'));
 
+  await sleep(2500); // let the token bucket refill, otherwise the rate limiter eats the burst first
   n = before();
   for (let i = 0; i < 12; i++) a.move(0, 0); // inputs faster than the tick rate
   await a.idle(4);

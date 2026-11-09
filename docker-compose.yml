@@ -1,0 +1,19 @@
+services:
+  surviver:
+    build: .
+    image: localhost/surviver:latest
+    container_name: surviver
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8085:8080" # only nginx talks to it
+    environment:
+      PREP_SECONDS: ${PREP_SECONDS:-600}
+      TOTAL_WAVES: ${TOTAL_WAVES:-5}
+      ALLOW_DEBUG: ${ALLOW_DEBUG:-1}
+      MAP_SEED: ${MAP_SEED:-20261109}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env}
+    volumes:
+      - surviver-data:/data
+
+volumes:
+  surviver-data:

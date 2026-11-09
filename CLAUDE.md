@@ -132,9 +132,12 @@ npm run deploy              # rsync на `ssh ubuntu` + docker compose up -d --b
 
 ## Деплой
 
-- Хост: `ssh ubuntu` (podman + docker compose), каталог `~/surviver`.
+- Хост: `ssh ubuntu` (rootless podman + `docker compose`), каталог `~/surviver`, `.env` с `ADMIN_TOKEN` создаётся там один раз (`chmod 600`, не в git).
+- `npm run deploy` (`scripts/deploy.sh`): rsync исходников → `docker compose up -d --build` → health-check → загрузка `desktop/dist/Surviver-portable.exe` в volume (`/data/downloads`, отдаётся по `/downloads/…`).
 - Контейнер `surviver` слушает `127.0.0.1:8085` → Nginx `surviver.yunix.software` (`deploy/nginx.conf`):
   `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";` для `/ws`.
-- SSL: `certbot --nginx -d surviver.yunix.software`.
-- На сервере есть чужие сайты (gigantt.pro и др.) — их конфиги не трогать.
+- Nginx + SSL (нужен sudo с паролем, делается вручную один раз): `ssh -t ubuntu 'bash ~/surviver/deploy/setup-nginx.sh'` (копирует конфиг, `nginx -t`, reload, `certbot --nginx --redirect`).
+- Грабли: на хосте `~/.curlrc` направляет curl через VPN-прокси → для локальных проверок `curl -q --noproxy '*' …`.
+- На сервере есть чужие сайты (gigantt.pro, casino.yunix.software и др.) — их конфиги не трогать.
+- Проверка прод-сервера ботами: `ssh -N -L 8095:127.0.0.1:8085 ubuntu &` → `npx tsx server/scripts/bots.ts ws://localhost:8095/ws`.
 - URL: https://surviver.yunix.software, WS: `wss://surviver.yunix.software/ws`, админка: `/admin.html`.

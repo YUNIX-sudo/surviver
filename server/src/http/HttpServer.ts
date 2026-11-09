@@ -161,6 +161,19 @@ export function createHttpServer(deps: { cfg: ServerConfig; lobby: Lobby; accoun
     });
 
   const serveStatic = (req: IncomingMessage, res: ServerResponse, url: URL) => {
+    // /downloads/* (e.g. the Windows build) is served from DATA_DIR/downloads so it lives outside the image
+    if (url.pathname.startsWith('/downloads/')) {
+      const root = resolve(cfg.dataDir, 'downloads');
+      const file = normalize(join(root, decodeURIComponent(url.pathname.slice('/downloads/'.length))));
+      if (!file.startsWith(root + '/') || !existsSync(file) || statSync(file).isDirectory()) {
+        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }).end('Файл ещё не загружен на сервер');
+        return;
+      }
+      res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream', 'content-length': statSync(file).size, 'content-disposition': 'attachment' });
+      if (req.method === 'HEAD') return res.end();
+      createReadStream(file).pipe(res);
+      return;
+    }
     if (!cfg.staticDir) {
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
       res.end('Surviver server is running. Client build not found (run `npm run build -w @surviver/client` or use Vite dev server).');
