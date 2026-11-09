@@ -207,12 +207,14 @@ export class HpBar {
   private fgMat: THREE.MeshBasicMaterial;
   constructor(
     private width = 1,
-    color = 0x22c55e,
+    private color = 0x22c55e,
   ) {
     const bg = new THREE.Mesh(barGeo, barBgMat);
     bg.scale.set(width + 0.06, 0.16, 1);
     bg.renderOrder = 10;
-    this.fgMat = new THREE.MeshBasicMaterial({ color, depthTest: false });
+    // transparent too: three.js draws all opaque objects before transparent ones regardless of renderOrder,
+    // so an opaque fill would end up UNDER the semi-transparent background and look dark
+    this.fgMat = new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true });
     this.fg = new THREE.Mesh(barGeo, this.fgMat);
     this.fg.scale.set(width, 0.1, 1);
     this.fg.renderOrder = 11;
@@ -222,7 +224,7 @@ export class HpBar {
     const r = Math.max(0, Math.min(1, ratio));
     this.fg.scale.x = Math.max(0.0001, this.width * r);
     this.fg.position.x = -(this.width * (1 - r)) / 2;
-    this.fgMat.color.setHex(r > 0.5 ? 0x22c55e : r > 0.25 ? 0xeab308 : 0xef4444);
+    this.fgMat.color.setHex(r > 0.5 ? this.color : r > 0.25 ? 0xeab308 : 0xef4444);
     this.root.quaternion.copy(camera.quaternion);
     this.root.visible = r < 0.999;
   }
