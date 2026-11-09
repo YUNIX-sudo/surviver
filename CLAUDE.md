@@ -35,7 +35,7 @@
 | `shared/`  | `protocol.ts` (типы пакетов), `validation.ts` (рукописные схемы), `constants.ts`, `physics.ts` (`stepPlayer`, `CollisionWorld`), `rng.ts` (сидированный mulberry32) |
 | `server/`  | `net/` (WS-сервер, `Connection`, rate limiter) — **сетевой слой**; `game/` (Room, World, системы, ИИ) — **бизнес-логика**; `anticheat/`; `accounts/`; `http/` (статика + REST + админка) |
 | `client/`  | `net/` (NetClient, Predictor, Interpolator, LagSimulator); `render/` (сцена, TabsCharacterMesh, меши); `ui/` (HUD, сетевой монитор, тест античита); страницы `index.html` (сайт), `play.html` (игра), `admin.html` (админка) |
-| `desktop/` | Electron-обёртка + `electron-builder` (не workspace, ставится отдельно при `build:win`) |
+| `desktop/` | Electron-обёртка + `electron-builder` (не workspace, ставится отдельно при `build:win`/`build:mac`) |
 | `deploy/`  | `nginx.conf` для `surviver.yunix.software` |
 
 ## Сетевой протокол (v1)
@@ -124,6 +124,7 @@ npm run build               # client/dist + server/dist
 npm start                   # прод: node server/dist/index.js (отдаёт и статику клиента)
 npm run test:bots           # headless-боты: движение, добыча, постройка, проверка античита
 npm run build:win           # Electron portable .exe (desktop/dist), клиент ходит на wss://surviver.yunix.software/ws
+npm run build:mac           # Electron .dmg arm64 + x64 (ad-hoc подпись в desktop/adhoc-sign.cjs, без Apple Developer ID)
 npm run deploy              # rsync на `ssh ubuntu` + docker compose up -d --build
 ```
 
@@ -136,7 +137,9 @@ npm run deploy              # rsync на `ssh ubuntu` + docker compose up -d --b
 - `npm run deploy` (`scripts/deploy.sh`): rsync исходников → `docker compose up -d --build` → health-check → загрузка `desktop/dist/Surviver-portable.exe` в volume (`/data/downloads`, отдаётся по `/downloads/…`).
 - Контейнер `surviver` слушает `127.0.0.1:8085` → Nginx `surviver.yunix.software` (`deploy/nginx.conf`):
   `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";` для `/ws`.
-- Nginx + SSL (нужен sudo с паролем, делается вручную один раз): `ssh -t ubuntu 'bash ~/surviver/deploy/setup-nginx.sh'` (копирует конфиг, `nginx -t`, reload, `certbot --nginx --redirect`).
+- Nginx + SSL (нужен sudo с паролем, делается вручную один раз): `ssh -t ubuntu 'bash ~/surviver/deploy/setup-nginx.sh'`.
+  На хосте `nginx.conf` **не** подключает `sites-enabled/` (все vhost'ы inline) → скрипт кладёт конфиг в `sites-available/` и добавляет одну строку `include` в `http {}` (бэкап, откат при провале `nginx -t`). Сертификат — `certbot certonly`, SSL прописан в `deploy/nginx.conf` вручную.
+- Грабли: в терминале VSCode задан `ELECTRON_RUN_AS_NODE` → локальный запуск собранного .app через `env -u ELECTRON_RUN_AS_NODE`.
 - Грабли: на хосте `~/.curlrc` направляет curl через VPN-прокси → для локальных проверок `curl -q --noproxy '*' …`.
 - На сервере есть чужие сайты (gigantt.pro, casino.yunix.software и др.) — их конфиги не трогать.
 - Проверка прод-сервера ботами: `ssh -N -L 8095:127.0.0.1:8085 ubuntu &` → `npx tsx server/scripts/bots.ts ws://localhost:8095/ws`.

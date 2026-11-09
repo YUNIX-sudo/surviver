@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "build:win": "electron-builder --win portable --x64",
-    "build:mac": "electron-builder --mac dir"
+    "build:mac": "electron-builder --mac dmg --arm64 --x64"
   },
   "devDependencies": {
     "electron": "^33.0.0",
@@ -17,10 +17,29 @@
   "build": {
     "appId": "software.yunix.surviver",
     "productName": "Surviver",
-    "directories": { "output": "dist" },
-    "files": ["main.cjs", "app/**/*"],
-    "win": { "target": "portable", "artifactName": "Surviver-portable.exe" },
-    "portable": { "artifactName": "Surviver-portable.exe" },
-    "mac": { "target": "dir" }
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "app/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "Surviver-portable.exe"
+    },
+    "portable": {
+      "artifactName": "Surviver-portable.exe"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.games",
+      "identity": null,
+      "artifactName": "Surviver-mac-${arch}.${ext}"
+    },
+    "dmg": {
+      "artifactName": "Surviver-mac-${arch}.${ext}"
+    },
+    "afterPack": "./adhoc-sign.cjs"
   }
 }

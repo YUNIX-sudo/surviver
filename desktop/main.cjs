@@ -27,6 +27,7 @@ function createWindow() {
   });
 }
 
-Menu.setApplicationMenu(null);
+// macOS keeps the default app menu: without it Cmd+Q / Cmd+C / Cmd+V (chat input) stop working
+if (process.platform !== 'darwin') Menu.setApplicationMenu(null);
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => app.quit());

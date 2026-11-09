@@ -17,11 +17,13 @@ docker compose up -d --build 2>&1 | grep -v -E 'Executing external compose provi
 sleep 3
 curl -q -fsS --noproxy "*" http://127.0.0.1:8085/api/health && echo " container healthy"
 REMOTE
-# upload the Windows build if it exists
-if [ -f desktop/dist/Surviver-portable.exe ]; then
-  ssh "$HOST" "docker exec surviver mkdir -p /data/downloads" 2>/dev/null || true
-  rsync -az --progress desktop/dist/Surviver-portable.exe "$HOST:/tmp/Surviver-portable.exe" >/dev/null
-  ssh "$HOST" "docker cp /tmp/Surviver-portable.exe surviver:/data/downloads/Surviver-portable.exe && rm /tmp/Surviver-portable.exe" 2>&1 | grep -v -E 'Executing external|podman-compose' || true
-  echo "uploaded Windows build"
-fi
+# upload desktop builds (Windows .exe, macOS .dmg) if they exist
+ssh "$HOST" "docker exec surviver mkdir -p /data/downloads" 2>/dev/null || true
+for f in desktop/dist/Surviver-portable.exe desktop/dist/Surviver-mac-arm64.dmg desktop/dist/Surviver-mac-x64.dmg; do
+  [ -f "$f" ] || continue
+  name=$(basename "$f")
+  rsync -az "$f" "$HOST:/tmp/$name"
+  ssh "$HOST" "docker cp /tmp/$name surviver:/data/downloads/$name && rm /tmp/$name" 2>&1 | grep -v -E 'Executing external|podman-compose' || true
+  echo "uploaded $name"
+done
 echo "deployed → https://surviver.yunix.software"

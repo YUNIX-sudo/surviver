@@ -23,6 +23,7 @@ const MIME: Record<string, string> = {
   '.woff2': 'font/woff2',
   '.exe': 'application/octet-stream',
   '.zip': 'application/zip',
+  '.dmg': 'application/x-apple-diskimage',
 };
 
 type Handler = (req: IncomingMessage, body: Record<string, unknown>, url: URL) => Promise<[number, unknown]> | [number, unknown];
