@@ -34,24 +34,32 @@ export const CORE_MAX_HP = 1500;
 
 // Anti-cheat tuning
 export const AC = {
-  /** Allowed inputs per second (client samples at TICK_RATE). */
-  MAX_INPUTS_PER_SEC: TICK_RATE * 1.25 + 3,
-  /** Max queued inputs per player; anything above is a time-dilation speedhack. */
-  MAX_INPUT_QUEUE: 6,
+  /**
+   * Movement credit: the server simulates 1 input per tick and banks up to this many ticks.
+   * A lag spike delivers a burst of inputs at once; banked credit lets the server catch up
+   * instead of punishing the player. Time dilation is still impossible: credit grows in real time.
+   */
+  MOVE_BANK_TICKS: TICK_RATE * 5, // 5 s
+  /** Backlog after a lag spike is replayed at most this many inputs per tick (smooth catch-up, no teleport). */
+  MAX_MOVES_PER_TICK: 4,
+  /** Queued, not yet simulated inputs. Above this the client sends faster than real time (time-dilation speedhack). */
+  MAX_INPUT_QUEUE: TICK_RATE * 6, // 6 s worth of inputs
   /** Claimed step longer than PLAYER_SPEED*dt*factor is suspicious. */
-  STEP_TOLERANCE_FACTOR: 1.5,
+  STEP_TOLERANCE_FACTOR: 3,
   /** Divergence between claimed and server position considered "real" desync. */
-  DIVERGENCE_TOLERANCE: 1.0,
+  DIVERGENCE_TOLERANCE: 2,
   /** Claimed jump bigger than this is a teleport. */
-  TELEPORT_DISTANCE: 5,
-  /** Token bucket for all incoming frames. */
+  TELEPORT_DISTANCE: 8,
+  /** After a SERVER_RECONCILE: resend it (without penalty) if the client has not converged after this long. */
+  RESYNC_RETRY_MS: 1500,
+  /** Token bucket for all incoming frames (burst covers a ~5 s lag spike flushing at once). */
   RATE_PER_SEC: 60,
-  RATE_BURST: 120,
+  RATE_BURST: 300,
   /** Dropped-by-rate-limit frames within 10 s that lead to kick. */
   FLOOD_KICK_DROPS: 3000,
   /** Violation score with decay; reaching this kicks the client. */
-  KICK_SCORE: 400,
-  SCORE_DECAY_PER_SEC: 4,
+  KICK_SCORE: 600,
+  SCORE_DECAY_PER_SEC: 10,
   /** Tiny grace for network jitter on cooldowns. */
   COOLDOWN_GRACE_MS: 60,
 } as const;

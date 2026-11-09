@@ -2,6 +2,7 @@
 // only PlayerLink.send()/sendRaw() of the sessions that joined.
 
 import {
+  AC,
   ATTACK_COOLDOWN_MS,
   ATTACK_REACH,
   Act,
@@ -63,8 +64,7 @@ export interface RoomHooks {
   onGameOver(room: Room, result: 'victory' | 'defeat', players: Player[]): void;
 }
 
-const MAX_QUEUE = 40;
-const MAX_MOVES_PER_TICK = 3;
+const MAX_QUEUE = AC.MAX_INPUT_QUEUE + 20; // moves + actions
 
 export class Room {
   tick = 0;
@@ -195,7 +195,7 @@ export class Room {
       case 'PLAYER_INPUT': {
         if (!this.ac.checkSeq(s, msg.seq, this.tick)) return;
         const moves = p.queue.reduce((n, a) => n + (a.type === 'PLAYER_INPUT' ? 1 : 0), 0);
-        if (!this.ac.checkInputRate(s, Date.now(), moves, this.tick)) return;
+        if (!this.ac.checkInputRate(s, moves, this.tick)) return;
         this.enqueue(p, { type: 'PLAYER_INPUT', seq: msg.seq, mx: msg.mx, mz: msg.mz, yaw: msg.yaw, px: msg.px, pz: msg.pz });
         return;
       }
@@ -367,13 +367,16 @@ export class Room {
     if (p.act !== Act.Idle && now >= p.actUntil) p.act = Act.Idle;
 
     // Process queued intents strictly in client order. Movement consumes a per-tick budget
-    // (1 per tick, max MAX_MOVES_PER_TICK banked) => a client can never simulate faster than real time.
-    p.moveBudget = Math.min(p.moveBudget + 1, MAX_MOVES_PER_TICK);
+    // (1 per tick, up to AC.MOVE_BANK_TICKS banked so a lag-spike burst catches up at once)
+    // => a client can never simulate faster than real time.
+    p.moveBudget = Math.min(p.moveBudget + 1, AC.MOVE_BANK_TICKS);
+    let movesThisTick = 0;
     while (p.queue.length) {
       const a = p.queue[0]!;
       if (a.type === 'PLAYER_INPUT') {
-        if (p.moveBudget < 1) break;
+        if (p.moveBudget < 1 || movesThisTick >= AC.MAX_MOVES_PER_TICK) break;
         p.moveBudget--;
+        movesThisTick++;
         p.queue.shift();
         this.processMove(p, a);
       } else {

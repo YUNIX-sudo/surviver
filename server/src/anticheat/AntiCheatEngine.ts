@@ -21,10 +21,11 @@ export interface AcState {
   total: number;
   byKind: Partial<Record<ViolationKind, number>>;
   lastReportAt: Partial<Record<string, number>>;
-  inputTimes: number[];
   lastSeq: number;
   lastClaimed: { x: number; z: number } | null;
   lastReconcileAt: number;
+  /** A correction was sent; claims are not judged until the client converges (inputs already in flight carry stale predictions). */
+  resyncing: boolean;
   kicked: boolean;
 }
 
@@ -34,10 +35,10 @@ export const newAcState = (): AcState => ({
   total: 0,
   byKind: {},
   lastReportAt: {},
-  inputTimes: [],
   lastSeq: -1,
   lastClaimed: null,
   lastReconcileAt: 0,
+  resyncing: false,
   kicked: false,
 });
 
@@ -88,14 +89,13 @@ export class AntiCheatEngine {
     ac.total++;
     ac.byKind[kind] = (ac.byKind[kind] ?? 0) + 1;
     this.counters[kind] = (this.counters[kind] ?? 0) + 1;
-    ac.score += WEIGHT[severity];
 
+    // Collapsed repeats are still rejected but neither logged nor scored: one burst (e.g. a lag spike
+    // flushing a backlog) must not add up to a kick. Persistent cheating still scores once per window.
     const throttleKey = kind + action;
-    if (throttleMs > 0 && now - (ac.lastReportAt[throttleKey] ?? 0) < throttleMs) {
-      if (ac.score >= AC.KICK_SCORE) this.kick(s, kind, tick);
-      return;
-    }
+    if (throttleMs > 0 && now - (ac.lastReportAt[throttleKey] ?? 0) < throttleMs) return;
     ac.lastReportAt[throttleKey] = now;
+    ac.score += WEIGHT[severity];
 
     const rec: ViolationRecord = {
       at: now,
@@ -144,15 +144,12 @@ export class AntiCheatEngine {
     return true;
   }
 
-  /** Input frequency: the client samples at TICK_RATE. Sending more = time dilation speedhack. */
-  checkInputRate(s: AcSubject, now: number, queueLen: number, tick: number): boolean {
-    const t = s.ac.inputTimes;
-    t.push(now);
-    while (t.length && t[0]! < now - 1000) t.shift();
-    if (t.length > AC.MAX_INPUTS_PER_SEC) {
-      this.report(s, 'SPEEDHACK', `input rate ${t.length}/s > ${AC.MAX_INPUTS_PER_SEC}/s (time dilation)`, 'medium', 'dropped', tick, 1000);
-      return false;
-    }
+  /**
+   * Input frequency: the client samples at TICK_RATE and the server simulates at most that fast (movement credit).
+   * Bursts after a lag spike are fine; only a backlog that keeps growing (more inputs than real time allows)
+   * means time dilation.
+   */
+  checkInputRate(s: AcSubject, queueLen: number, tick: number): boolean {
     if (queueLen >= AC.MAX_INPUT_QUEUE) {
       this.report(s, 'SPEEDHACK', `input queue overflow (${queueLen}) — inputs faster than server tick`, 'medium', 'dropped', tick, 1000);
       return false;
@@ -178,29 +175,39 @@ export class AntiCheatEngine {
     const prev = s.ac.lastClaimed;
     s.ac.lastClaimed = { x: px, z: pz };
     const divergence = dist(server.x, server.z, px, pz);
+    const now = Date.now();
+    if (s.ac.resyncing) {
+      // Waiting for the client to apply the correction. The claimed position is never used for simulation,
+      // so not judging it here costs nothing; on a slow link the correction may also be lost/late → resend.
+      if (divergence <= AC.DIVERGENCE_TOLERANCE) s.ac.resyncing = false;
+      else if (now - s.ac.lastReconcileAt > AC.RESYNC_RETRY_MS) {
+        s.ac.lastReconcileAt = now;
+        return true;
+      }
+      return false;
+    }
     if (divergence <= AC.DIVERGENCE_TOLERANCE) return false;
     const maxStep = PLAYER_SPEED * TICK_DT;
     const step = prev ? dist(prev.x, prev.z, px, pz) : 0;
-    const now = Date.now();
     if (step > maxStep * AC.STEP_TOLERANCE_FACTOR) {
       const kind: ViolationKind = step > AC.TELEPORT_DISTANCE ? 'TELEPORT' : 'SPEEDHACK';
       this.report(
         s,
         kind,
         `claimed step ${step.toFixed(2)} m > v·Δt=${maxStep.toFixed(2)} m (×${AC.STEP_TOLERANCE_FACTOR}); off by ${divergence.toFixed(2)} m`,
-        kind === 'TELEPORT' ? 'high' : 'medium',
+        kind === 'TELEPORT' ? 'high' : 'low',
         'corrected',
         tick,
         kind === 'TELEPORT' ? 0 : 1000,
       );
       s.ac.lastReconcileAt = now;
-      s.ac.lastClaimed = { x: server.x, z: server.z };
+      s.ac.resyncing = true;
       return true;
     }
-    // Large silent desync (e.g. after a correction is still in flight): resync without punishing.
-    if (divergence > AC.TELEPORT_DISTANCE * 0.6 && now - s.ac.lastReconcileAt > 300) {
+    // Large silent desync (e.g. lost snapshots on a bad link): resync without punishing.
+    if (divergence > AC.TELEPORT_DISTANCE * 0.6) {
       s.ac.lastReconcileAt = now;
-      s.ac.lastClaimed = { x: server.x, z: server.z };
+      s.ac.resyncing = true;
       return true;
     }
     return false;

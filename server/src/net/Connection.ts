@@ -5,6 +5,9 @@ import type { WebSocket, RawData } from 'ws';
 import { AC, MAX_FRAME_BYTES, parseClientFrame, type ClientMessage, type ServerMessage } from '@surviver/shared';
 import { TokenBucket } from './RateLimiter';
 
+/** Heartbeat runs every 3 s; terminate only after ~15 s of total silence (lag spikes must not drop players). */
+const HEARTBEAT_MAX_MISSED = 5;
+
 export interface PlayerLink {
   readonly id: number;
   readonly remote: string;
@@ -43,7 +46,8 @@ export class Connection implements PlayerLink {
   private rateReportAt = 0;
   private droppedSinceReport = 0;
   private pingSentAt = 0;
-  private alive = true;
+  /** Heartbeats without a pong / any frame. A bad link may stall for seconds: be patient. */
+  private missed = 0;
   private closed = false;
 
   constructor(
@@ -56,18 +60,18 @@ export class Connection implements PlayerLink {
     ws.on('close', () => this.onClosed());
     ws.on('error', () => this.onClosed());
     ws.on('pong', () => {
-      this.alive = true;
+      this.missed = 0;
       this.stats.rtt = Date.now() - this.pingSentAt;
     });
   }
 
   /** Heartbeat: called every few seconds by the WS server. Terminates dead peers. */
   heartbeat() {
-    if (!this.alive) {
+    if (this.missed >= HEARTBEAT_MAX_MISSED) {
       this.ws.terminate();
       return;
     }
-    this.alive = false;
+    this.missed++;
     this.pingSentAt = Date.now();
     try {
       this.ws.ping();
@@ -100,6 +104,7 @@ export class Connection implements PlayerLink {
     const size = Array.isArray(data) ? data.reduce((s, b) => s + b.length, 0) : (data as Buffer | ArrayBuffer).byteLength;
     this.stats.bytesIn += size;
     this.stats.msgsIn++;
+    this.missed = 0; // any frame proves the peer is alive
     netTotals.bytesIn += size;
     netTotals.msgsIn++;
 

@@ -1,6 +1,6 @@
 // DOM HUD over the canvas: phase timer, bars, inventory, hotbar, chat, minimap, toasts.
 
-import { BUILDING_DEFS, BuildingKind, MAP_HALF, ResourceKind, type GameOverMsg, type ViolationMsg } from '@surviver/shared';
+import { BUILDING_DEFS, BuildingKind, MAP_HALF, ResourceKind, type GameOverMsg} from '@surviver/shared';
 import { esc } from '../../common/api';
 import type { Game } from '../Game';
 
@@ -62,11 +62,6 @@ export class Hud {
       v.classList.add('hurt');
       setTimeout(() => v.classList.remove('hurt'), 120);
     };
-    const prevViolation = game.onViolation;
-    game.onViolation = (v) => {
-      prevViolation(v);
-      this.violationToast(v);
-    };
     game.onGameOver = (m) => this.showGameOver(m);
     game.onJoined = () => {
       $('gameover').hidden = true;
@@ -106,10 +101,6 @@ export class Hud {
     box.appendChild(t);
     while (box.children.length > 4) box.firstChild?.remove();
     setTimeout(() => t.remove(), 3600);
-  }
-
-  private violationToast(v: ViolationMsg) {
-    this.toast(`🛡 Античит: <b>${v.kind}</b> → ${v.action} <span class="muted">(score ${v.score})</span>`);
   }
 
   private showGameOver(m: GameOverMsg) {
