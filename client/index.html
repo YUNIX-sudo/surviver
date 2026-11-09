@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.svg" />
+    <title>Surviver — кооперативное выживание против орды</title>
+    <meta name="description" content="Мультиплеерная survival-игра в браузере: добывайте ресурсы, стройте базу и отбивайтесь от волн TABS-существ вместе с друзьями." />
+  </head>
+  <body class="site">
+    <header class="site-head">
+      <a class="logo" href="#">SURVIVER</a>
+      <nav><a href="#about">Об игре</a><a href="#how">Как играть</a><a href="#tech">Сеть</a><a href="#top">Рейтинг</a><a href="#account" id="nav-account">Аккаунт</a></nav>
+      <a class="btn primary" id="play-top" href="/play.html">Играть</a>
+    </header>
+
+    <section class="hero">
+      <div class="hero-text">
+        <h1>Стройте. Держитесь.<br /><span>Переживите орду.</span></h1>
+        <p>Кооперативная survival-игра в реальном времени прямо в браузере. 10 минут на добычу ограниченных ресурсов и постройку обороны вокруг Ядра — затем волны шатающихся пучеглазых существ пойдут на штурм.</p>
+        <div class="row">
+          <a class="btn primary big" id="play-hero" href="/play.html">▶ Играть сейчас</a>
+          <a class="btn big" href="#account">Создать аккаунт</a>
+        </div>
+        <div class="live" id="live"><span class="dot"></span> <span id="live-text">подключение к серверу…</span></div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="bean b1"><i></i><i></i></div>
+        <div class="bean b2"><i></i><i></i></div>
+        <div class="bean b3"><i></i><i></i></div>
+        <div class="crystal"></div>
+      </div>
+    </section>
+
+    <section id="about" class="cards">
+      <div class="card"><h3>🪓 Фаза подготовки</h3><p>Ресурсы на карте строго ограничены: деревья, камень и редкое железо. Договаривайтесь, кто что добывает.</p></div>
+      <div class="card"><h3>🧱 Оборона</h3><p>Стены задерживают орду, шипы ранят и замедляют, турели стреляют сами. Всё строится по сетке вокруг Ядра.</p></div>
+      <div class="card"><h3>👾 Орда</h3><p>Бегуны быстрые и хрупкие, бойцы ломают стены дубинами, гиганты сносят всё на пути. 5 волн — каждая злее.</p></div>
+      <div class="card"><h3>🤝 Кооператив</h3><p>До 4 игроков в комнате. Нажмите «Готов» вместе, чтобы начать штурм раньше таймера.</p></div>
+    </section>
+
+    <section id="how" class="split">
+      <div>
+        <h2>Как играть</h2>
+        <ul class="keys">
+          <li><kbd>W A S D</kbd> — движение</li>
+          <li><kbd>ЛКМ</kbd> / <kbd>Space</kbd> — добыча ресурса или удар по мобу</li>
+          <li><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> — стена, шипы, турель; <kbd>ПКМ</kbd> — отмена</li>
+          <li><kbd>R</kbd> — «Готов», <kbd>Enter</kbd> — чат, <kbd>F2</kbd> — сетевой монитор</li>
+        </ul>
+      </div>
+      <div id="tech">
+        <h2>Под капотом</h2>
+        <ul class="tech">
+          <li><b>Авторитарный сервер</b> Node.js, 20 тиков/с, чистый WebSocket</li>
+          <li><b>Client-Side Prediction</b> + reconciliation для своего персонажа</li>
+          <li><b>Entity Interpolation</b>: 20 Гц сервера → 60–120 FPS на экране</li>
+          <li><b>Античит</b>: speedhack, teleport, kill aura, rapid fire, remote build, флуд</li>
+          <li><b>Three.js</b>: вся графика процедурная, без внешних моделей</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="split">
+      <div id="top">
+        <h2>🏆 Рейтинг</h2>
+        <table class="stats" id="leaderboard"><tr><td class="muted">загрузка…</td></tr></table>
+      </div>
+      <div id="account">
+        <h2>Аккаунт</h2>
+        <div id="acc-box"></div>
+      </div>
+    </section>
+
+    <section class="cards" id="downloads">
+      <div class="card"><h3>🌐 Браузер</h3><p>Работает в любом современном браузере, ничего ставить не нужно.</p><a class="btn" href="/play.html">Играть</a></div>
+      <div class="card"><h3>🪟 Windows</h3><p>Портативная сборка на Electron — один .exe, подключается к этому же серверу.</p><a class="btn" id="dl-win" href="/downloads/Surviver-portable.exe">Скачать .exe</a></div>
+    </section>
+
+    <footer class="site-foot">Surviver · лабораторные работы «Сетевые технологии» · <a href="/admin.html">админка</a></footer>
+    <script type="module" src="/src/site/main.ts"></script>
+  </body>
+</html>
