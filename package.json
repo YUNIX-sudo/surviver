@@ -9,7 +9,7 @@
     "dev:client": "npm run dev -w @surviver/client",
     "typecheck": "tsc -p shared --noEmit && tsc -p server --noEmit && tsc -p client --noEmit",
     "build": "npm run build -w @surviver/client && npm run build -w @surviver/server",
-    "start": "node server/dist/index.js",
+    "start": "node server/dist/index.cjs",
     "test:bots": "npm run bots -w @surviver/server",
     "build:win": "npm run build:desktop -w @surviver/client && npm --prefix desktop install && npm --prefix desktop run build:win",
     "deploy": "bash scripts/deploy.sh"
